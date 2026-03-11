@@ -1173,120 +1173,121 @@ function savePosts() {
 function loadPosts() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) allPosts = JSON.parse(raw);
-  } catch(e) { allPosts = []; }
-  // Seed with example posts if empty
-  if (allPosts.length === 0) {
-    allPosts = [
-      {
-        id: 1,
-        title: '5 Salesforce Flow Automation Mistakes (And How to Fix Them)',
-        content: `Flow Builder is one of the most powerful tools in Salesforce, but it's also one of the easiest to misuse. After reviewing hundreds of orgs over the past decade, I keep seeing the same five mistakes.\n\n1. Too Many Flows on One Object\nHaving 10+ flows on the Opportunity object is a recipe for unpredictable behavior and governor limit errors. Consolidate related logic into a single flow with decision branches.\n\n2. Using Formulas for Complex Logic Instead of Decisions\nFormula fields inside flows are powerful but can become unreadable. Break complex IF/ELSE chains into Decision elements — your future self will thank you.\n\n3. Not Using Fault Paths\nEvery flow that performs DML operations should have a Fault connector. Without it, errors surface as cryptic messages to end users.\n\n4. Hardcoding IDs\nNever hardcode record type IDs, profile IDs, or queue IDs in flows. They'll break in every sandbox refresh. Use Custom Labels or Custom Metadata instead.\n\n5. Ignoring Bulk-Safe Design\nFlows process records in batches. Always design your loops and DML operations with bulk operations in mind to avoid SOQL 101 limits.`,
-        category: 'tips',
-        ts: Date.now() - 86400000 * 3
-      },
-      {
-        id: 2,
-        title: 'Why Your Sales Cloud ROI Is Lower Than It Should Be',
-        content: `Most companies underutilize Sales Cloud by 40–60%. Here's why — and what to do about it.\n\nThe Problem: Data Debt\nDirty data is the silent killer of CRM ROI. Duplicate accounts, stale leads, and incomplete contact records make Salesforce feel like a chore rather than an asset. If reps don't trust the data, they won't use the tool.\n\nThe Fix: Start with a Data Health Sprint\nDedicate 2 weeks to deduplication, field-level audits, and establishing mandatory fields on key objects. Use tools like DupeCatcher or Salesforce's built-in duplicate management rules.\n\nThe Problem: Too Many Fields, Not Enough Process\nI've seen Opportunity pages with 80+ fields. That's not a CRM — that's a data entry form. Reps skip it entirely.\n\nThe Fix: Page Layout Discipline\nCut your visible fields by 50%. Use Dynamic Forms to show fields only when they're relevant. Your adoption metrics will climb within weeks.\n\nThe Biggest Lever: Manager Adoption\nIf your VP of Sales runs their pipeline review from a spreadsheet, your reps will too. Invest in executive-level training and build the reports managers actually want to use.`,
-        category: 'sales',
-        ts: Date.now() - 86400000 * 7
-      },
-      {
-        id: 3,
-        title: 'Building a Future-Proof Salesforce Architecture: 3 Principles',
-        content: `After architecting 80+ Salesforce orgs, I've distilled what separates the ones that scale from the ones that collapse under their own weight.\n\nPrinciple 1: Declarative First, Code Last\nEvery piece of Apex is a commitment to maintain. Before writing a trigger, ask: can Flow, Validation Rules, or a Formula field solve this? Code should only enter when declarative tools genuinely can't handle the requirement.\n\nPrinciple 2: Design for Data, Not for Features\nOrgs fail when they're designed around feature requests instead of data relationships. Start every project with an Entity Relationship Diagram. Understand how records relate before touching Setup.\n\nPrinciple 3: Build for the Org Admin You're Leaving Behind\nYou won't be there in 3 years. Someone else will maintain what you built. Document everything. Use descriptive field names. Avoid clever-but-cryptic solutions. The best architecture is the one that the next admin can understand without calling you.`,
-        category: 'strategy',
-        ts: Date.now() - 86400000 * 14
-      }
-    ];
-    savePosts();
+    if (raw) {
+      allPosts = JSON.parse(raw);
+    } else {
+      allPosts = [];
+    }
+  } catch (e) {
+    allPosts = [];
   }
+
+  renderPosts();
 }
 
 function renderPosts() {
-  const grid = document.getElementById('blogGrid');
-  const empty = document.getElementById('blogEmpty');
-  const filtered = activeFilter === 'all' ? allPosts : allPosts.filter(p => p.category === activeFilter);
 
-  document.getElementById('postCountNum').textContent = allPosts.length;
+  const grid = document.getElementById("blogGrid");
+  const empty = document.getElementById("blogEmpty");
 
-  // Remove all cards (keep empty state)
-  grid.querySelectorAll('.blog-card').forEach(c => c.remove());
+  grid.innerHTML = "";
 
-  if (filtered.length === 0) {
-    empty.style.display = 'block';
-    empty.querySelector('p').textContent = activeFilter === 'all'
-      ? 'No posts yet. Write your first Salesforce insight using the form above!'
-      : `No posts in this category yet.`;
+  let posts = allPosts;
+
+  if (activeFilter !== "all") {
+    posts = posts.filter(p => p.category === activeFilter);
+  }
+
+  document.getElementById("postCountNum").textContent = posts.length;
+
+  if (!posts.length) {
+    grid.appendChild(empty);
     return;
   }
 
-  empty.style.display = 'none';
+  posts.forEach(post => {
 
-  [...filtered].reverse().forEach((post, i) => {
-    const card = document.createElement('div');
-    card.className = 'blog-card';
-    card.style.animationDelay = `${i * 0.07}s`;
-    card.dataset.category = post.category;
+    const card = document.createElement("div");
+    card.className = "blog-card";
 
-    const excerpt = post.content.substring(0, 160).replace(/\n/g, ' ') + '…';
+    const excerpt = post.content.substring(0,140) + "...";
+
     card.innerHTML = `
-      <div class="blog-card-header">
-        <span class="blog-tag tag-${post.category}">${categoryLabels[post.category]}</span>
-        <span class="blog-date">${formatDate(post.ts)}</span>
+    <div class="blog-card-header">
+      <span class="blog-tag tag-${post.category}">
+        ${categoryLabels[post.category]}
+      </span>
+      <span class="blog-date">${formatDate(post.timestamp)}</span>
+    </div>
+
+    <div class="blog-card-body">
+      <div class="blog-card-title" onclick="openPost(${post.id})">
+        ${post.title}
       </div>
-      <div class="blog-card-body">
-        <div class="blog-card-title" onclick="openModal(${post.id})">${post.title}</div>
-        <p class="blog-card-excerpt">${excerpt}</p>
+
+      <div class="blog-card-excerpt">
+        ${excerpt}
       </div>
-      <div class="blog-card-footer">
-        <div class="blog-meta">
-          <span class="reading-time">⏱ ${readingTime(post.content)}</span>
+    </div>
+
+    <div class="blog-card-footer">
+
+      <div class="blog-meta">
+        <div class="reading-time">
+          ${readingTime(post.content)}
         </div>
-        <div class="blog-actions-row">
-          <button class="btn-read-more" onclick="openModal(${post.id})">Read more <span>→</span></button>
-          <button class="btn-delete-post" onclick="deletePost(${post.id})" title="Delete post">🗑</button>
-        </div>
-      </div>`;
+      </div>
+
+      <div class="blog-actions-row">
+
+        <button class="btn-read-more" onclick="openPost(${post.id})">
+          Read →
+        </button>
+
+        <button class="btn-delete-post" onclick="deletePost(${post.id})">
+          🗑
+        </button>
+
+      </div>
+
+    </div>
+    `;
+
     grid.appendChild(card);
+
   });
 
-  // Re-attach cursor hover for new cards
-  grid.querySelectorAll('.blog-card, .btn-read-more, .btn-delete-post').forEach(el => {
-    el.addEventListener('mouseenter', () => { ring.style.width='56px'; ring.style.height='56px'; ring.style.borderColor='var(--navy)'; });
-    el.addEventListener('mouseleave', () => { ring.style.width='38px'; ring.style.height='38px'; ring.style.borderColor='var(--sf-blue)'; });
-  });
 }
 
 function publishPost() {
-  const title   = document.getElementById('blogTitle').value.trim();
-  const content = document.getElementById('blogContent').value.trim();
+
+  const title = document.getElementById('blogTitle').value.trim();
   const category = document.getElementById('blogCategory').value;
+  const content = document.getElementById('blogContent').value.trim();
 
-  if (!title) { document.getElementById('blogTitle').focus(); return; }
-  if (!content) { document.getElementById('blogContent').focus(); return; }
+  if (!title || !content) {
+    alert("Please add a title and content.");
+    return;
+  }
 
-  const post = { id: Date.now(), title, content, category, ts: Date.now() };
-  allPosts.push(post);
+  const post = {
+    id: Date.now(),
+    title,
+    category,
+    content,
+    timestamp: Date.now()
+  };
+
+  allPosts.unshift(post);
   savePosts();
-
-  document.getElementById('blogTitle').value = '';
-  document.getElementById('blogContent').value = '';
-
-  // Reset filter to all
-  activeFilter = 'all';
-  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-  document.querySelector('[data-filter="all"]').classList.add('active');
-
   renderPosts();
 
-  const fb = document.getElementById('publishFeedback');
-  fb.classList.add('show');
-  setTimeout(() => fb.classList.remove('show'), 3000);
+  document.getElementById('blogTitle').value = "";
+  document.getElementById('blogContent').value = "";
 
-  // Scroll to grid
-  setTimeout(() => document.getElementById('blogGrid').scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
+  const fb = document.getElementById("publishFeedback");
+  fb.classList.add("show");
+  setTimeout(()=>fb.classList.remove("show"),2000);
 }
 
 function previewPost() {
@@ -1342,6 +1343,79 @@ const obs = new IntersectionObserver(entries => {
   entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
 }, { threshold: 0.08 });
 document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+
+  function openPost(id) {
+
+  const post = allPosts.find(p => p.id === id);
+
+  if (!post) return;
+
+  document.getElementById("modalTag").textContent = categoryLabels[post.category];
+  document.getElementById("modalTag").className = `blog-tag tag-${post.category}`;
+
+  document.getElementById("modalTitle").textContent = post.title;
+  document.getElementById("modalBody").textContent = post.content;
+  document.getElementById("modalDate").textContent = formatDate(post.timestamp);
+  document.getElementById("modalReading").textContent = readingTime(post.content);
+
+  document.getElementById("blogModal").classList.add("open");
+}
+
+function closeModal(e) {
+  if (e.target.id === "blogModal") {
+    document.getElementById("blogModal").classList.remove("open");
+  }
+}
+
+function closeModalDirect() {
+  document.getElementById("blogModal").classList.remove("open");
+}
+
+function deletePost(id) {
+
+  if (!confirm("Delete this post?")) return;
+
+  allPosts = allPosts.filter(p => p.id !== id);
+
+  savePosts();
+  renderPosts();
+}
+
+function filterPosts(filter, el) {
+
+  activeFilter = filter;
+
+  document.querySelectorAll(".filter-tab").forEach(tab => {
+    tab.classList.remove("active");
+  });
+
+  el.classList.add("active");
+
+  renderPosts();
+}
+
+function previewPost() {
+
+  const title = document.getElementById("blogTitle").value;
+  const category = document.getElementById("blogCategory").value;
+  const content = document.getElementById("blogContent").value;
+
+  if (!title || !content) {
+    alert("Add title and content to preview.");
+    return;
+  }
+
+  document.getElementById("modalTag").textContent = categoryLabels[category];
+  document.getElementById("modalTitle").textContent = title;
+  document.getElementById("modalBody").textContent = content;
+  document.getElementById("modalDate").textContent = "Preview";
+  document.getElementById("modalReading").textContent = readingTime(content);
+
+  document.getElementById("blogModal").classList.add("open");
+
+}
+
+loadPosts();
 </script>
 </body>
 </html>
